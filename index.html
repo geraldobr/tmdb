@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filmes e Séries</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #121212;
+            color: white;
+        }
+
+        header {
+            width: 100%;
+            padding: 10px;
+            background-color: #1f1f1f;
+            color: white;
+            text-align: center;
+        }
+
+        #searchBar {
+            width: 90%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            max-width: 400px; /* Limita a largura máxima do campo de pesquisa */
+        }
+
+        #counts {
+            margin-top: 10px;
+        }
+
+        main {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .card {
+            border: 1px solid #333;
+            border-radius: 10px;
+            margin: 2px;
+            padding: 2px;
+            width: 100px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            text-align: center;
+            background-color: #1f1f1f;
+        }
+
+        .card img {
+            max-width: 100%;
+            height: auto; /* Garante que a imagem mantenha a proporção correta */
+            border-radius: 10px;
+        }
+
+        .card h3 {
+            font-size: 1.2em;
+            margin: 10px 0 5px;
+        }
+
+        .card p {
+            font-size: 1em;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <input type="text" id="searchBar" placeholder="Pesquisar...">
+        <div id="counts">Filmes: 0 | Séries: 0</div>
+    </header>
+    <main id="content"></main>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const apiUrl = 'https://www.googleapis.com/drive/v3/files/1u4LNyRp5c0ypbCANgFpzfk2t6hRVwVEB?alt=media&key=AIzaSyAHfTjunuAnmyVgGADZo4HD4XN2YAO0MnQ'; // Substitua pela URL da sua API
+            const content = document.getElementById('content');
+            const searchBar = document.getElementById('searchBar');
+            const counts = document.getElementById('counts');
+            const delayTimeout = 100; // Atraso em milissegundos
+            let items = []; // Array para armazenar todos os itens da API
+
+            // Função para normalizar o texto (remover acentos e converter para minúsculas)
+            const normalizeText = (text) => {
+                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            };
+
+            const fetchData = async () => {
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    return data; // Retorna os dados obtidos da API
+                } catch (error) {
+                    console.error('Erro ao buscar dados da API:', error);
+                    return []; // Retorna um array vazio em caso de erro
+                }
+            };
+
+            const displayItems = (itemsToDisplay) => {
+                content.innerHTML = ''; // Limpa o conteúdo atual
+                let filmCount = 0;
+                let seriesCount = 0;
+                itemsToDisplay.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // Limita o título a 20 caracteres
+                    let truncatedTitle = item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name;
+
+                    card.innerHTML = `
+                        <img src="${item.icon}" alt="${item.name}">
+                        <h3>${truncatedTitle}</h3>
+                        <p>${item.type}</p>
+                    `;
+                    content.appendChild(card);
+
+                    // Contar os tipos de itens
+                    if (item.type.toLowerCase() === 'filme') {
+                        filmCount++;
+                    } else if (item.type.toLowerCase() === 'serie') {
+                        seriesCount++;
+                    }
+                });
+                counts.textContent = `Filmes: ${filmCount} | Séries: ${seriesCount}`;
+            };
+
+            const filterItems = (searchText) => {
+                const normalizedSearch = normalizeText(searchText);
+                const filteredItems = items.filter(item => normalizeText(item.name).includes(normalizedSearch));
+                displayItems(filteredItems); // Exibe os itens filtrados
+            };
+
+            let typingTimeout = null;
+            searchBar.addEventListener('input', (e) => {
+                clearTimeout(typingTimeout);
+                const searchText = e.target.value.trim(); // Remove espaços extras
+
+                // Aplica um pequeno atraso antes de começar a filtrar
+                typingTimeout = setTimeout(() => {
+                    filterItems(searchText);
+                }, delayTimeout);
+            });
+
+            fetchData()
+                .then(data => {
+                    items = data; // Armazena todos os itens da API no array 'items'
+                    displayItems(items); // Exibe todos os itens ao carregar
+                })
+                .catch(err => console.error('Erro ao buscar dados da API:', err));
+        });
+    </script>
+</body>
+</html>
